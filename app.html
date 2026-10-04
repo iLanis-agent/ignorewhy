@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IgnoreWhy - why is this file ignored by git?</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#0e1420; color:#eaf0fb; line-height:1.5; }
+  .wrap { max-width:700px; margin:0 auto; padding:26px 16px 50px; }
+  h1 { font-size:28px; } h1 span { color:#93c5fd; }
+  .sub { color:#a9b8d6; margin:6px 0 16px; }
+  .card { background:#172033; border-radius:14px; padding:14px; margin-bottom:12px; }
+  label { font-size:12px; color:#a9b8d6; display:block; margin-bottom:3px; }
+  textarea { width:100%; background:#0e1420; color:#eaf0fb; border:1px solid #3f5580; border-radius:8px; padding:8px; font-size:13px; font-family:ui-monospace,Menlo,monospace; min-height:120px; margin-bottom:10px; }
+  button { background:#1d4ed8; color:#eaf0fb; border:0; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px; margin-right:6px; margin-top:6px; }
+  .err { color:#ff9c8a; } .note { font-size:12.5px; color:#7f93b8; margin-top:6px; } .muted { color:#a9b8d6; font-size:13px; }
+  .res { border-top:1px solid #2c3d5e; padding:10px 0; } .res code, .val { font-family:ui-monospace,Menlo,monospace; font-size:13px; word-break:break-all; }
+  .badge { display:inline-block; font-size:12px; font-weight:800; border-radius:4px; padding:2px 8px; margin-right:8px; }
+  .ok { background:#166534; color:#fff; } .no { background:#b91c1c; color:#fff; }
+  .warn { color:#fbbf24; font-size:13px; margin-top:4px; } .k { font-size:12px; color:#7f93b8; margin-top:6px; }
+  .val { background:#0e1420; border-radius:6px; padding:6px 8px; display:block; margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ignore<span>Why</span></h1>
+  <div class="sub">Paste a .gitignore and a list of paths. IgnoreWhy says which are ignored, and which line decided it: last match wins, negation, directory-only rules, and the parent-directory trap.</div>
+  <div class="card">
+    <label>.gitignore</label>
+    <textarea id="t" spellcheck="false"></textarea>
+    <label>Paths to test, one per line. End a path with / if it is a directory.</label>
+    <textarea id="p" spellcheck="false" style="min-height:100px"></textarea>
+    <div><button id="s1">Re-include blocked by parent</button><button id="s2">Last match wins</button><button id="s3">Directory-only and **</button><button id="s4">Everything except one folder</button></div>
+    <div id="err" class="err" style="margin-top:6px"></div>
+  </div>
+  <div class="card"><div id="out"></div></div>
+  <div class="note">One .gitignore at the repo root (no nested .gitignore files, no .git/info/exclude or global excludes), case-sensitive matching. Follows the gitignore manual (read in full) and was compared with real git check-ignore on thousands of random paths. A path without a trailing slash is treated as a file. Nothing is sent anywhere.</div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var G = window.IgnoreWhy, $ = function (i) { return document.getElementById(i); };
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  var S = {
+    s1: ['logs/\n!logs/keep.txt\n*.log\n!important.log\n', 'logs/keep.txt\nlogs/\napp/debug.log\napp/important.log\nlogs/important.log'],
+    s2: ['*.html\n!foo.html\n*.html\n', 'docs/foo.html\ndocs/bar.html\nfoo.html'],
+    s3: ['build/\n/dist\nsrc/**/generated/\n**/*.tmp\ndocs/**\n!docs/README.md\n', 'build\nbuild/\nbuild/out.js\ndist\nsrc/a/b/generated/\nsrc/generated/x.ts\nnotes/a/b.tmp\ndocs/README.md\ndocs/guide.md'],
+    s4: ['/*\n!/foo\n/foo/*\n!/foo/bar\n', 'readme.md\nfoo/other.txt\nfoo/bar/\nfoo/bar/hello.c\nfoo/baz/x.c']
+  };
+  Object.keys(S).forEach(function (k) { $(k).onclick = function () { $('t').value = S[k][0]; $('p').value = S[k][1]; run(); }; });
+  function run() {
+    var o = $('out'), err = $('err'); err.textContent = '';
+    var paths = $('p').value.split(/\r?\n/).map(function (s) { return s.replace(/^\s+/, '').replace(/\s+$/, ''); }).filter(Boolean);
+    if (!paths.length) { err.textContent = 'Add at least one path to test.'; o.innerHTML = ''; return; }
+    if (paths.length > 300) { err.textContent = 'Up to 300 paths at a time.'; o.innerHTML = ''; return; }
+    var parsed = G.parse($('t').value), h = '';
+    h += '<div class="muted">' + parsed.rules.length + ' active pattern' + (parsed.rules.length === 1 ? '' : 's') + '</div>';
+    parsed.warnings.forEach(function (w) { h += '<div class="warn">' + esc(w) + '</div>'; });
+    paths.forEach(function (u) {
+      var r = G.check(parsed, u);
+      if (r.error) { h += '<div class="res"><span class="badge no">?</span><code>' + esc(u) + '</code> <span class="muted">' + esc(r.error) + '</span></div>'; return; }
+      var why;
+      if (r.via) why = 'Ignored because its parent directory <b>' + esc(r.via) + '/</b> is ignored by line ' + r.rule.line + ' (<code>' + esc(r.rule.raw) + '</code>). Git never looks inside an ignored directory, so no later rule can bring this file back.';
+      else if (r.rule && r.ignored) why = 'Ignored by line ' + r.rule.line + ': <code>' + esc(r.rule.raw) + '</code> (the last matching line).';
+      else if (r.rule) why = 'Not ignored: the last matching line is ' + r.rule.line + ', <code>' + esc(r.rule.raw) + '</code>, which re-includes it.';
+      else why = 'Not ignored: no line matches.';
+      h += '<div class="res"><span class="badge ' + (r.ignored ? 'no' : 'ok') + '">' + (r.ignored ? 'IGNORED' : 'TRACKED') + '</span><code>' + esc(r.path) + (r.isDir ? '/' : '') + '</code><div class="muted" style="margin-top:4px">' + why + '</div>';
+      if (r.matches.length > 1) h += '<div class="k">All lines that match this path</div>' + r.matches.map(function (m) { return '<span class="val">line ' + m.line + ': ' + esc(m.raw) + '</span>'; }).join('');
+      h += '</div>';
+    });
+    o.innerHTML = h;
+  }
+  ['t', 'p'].forEach(function (i) { $(i).oninput = run; });
+  $('s1').onclick();
+})();
+</script>
+</body>
+</html>
