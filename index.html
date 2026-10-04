@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IgnoreWhy - why is this file ignored by git?</title>
+<meta name="description" content="Paste a .gitignore and paths: see which are ignored and exactly which line decided, including the parent-directory trap.">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#0e1420; color:#eaf0fb; line-height:1.6; }
+  .wrap { max-width:680px; margin:0 auto; padding:48px 20px 60px; }
+  .logo { font-size:46px; font-weight:800; } .logo span { color:#93c5fd; }
+  .tag { font-size:19px; margin-top:10px; color:#d3def3; }
+  .cta { display:inline-block; margin-top:26px; background:#93c5fd; color:#0e1420; font-weight:700; padding:14px 30px; border-radius:12px; text-decoration:none; }
+  h2 { font-size:21px; margin:40px 0 10px; } li { color:#a9b8d6; margin-bottom:8px; } ul { margin-left:20px; }
+  .demo { margin-top:26px; background:#172033; border-radius:14px; padding:18px; } .demo b { color:#93c5fd; }
+  footer { margin-top:50px; font-size:13px; color:#7f93b8; } a { color:#93c5fd; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">Ignore<span>Why</span></div>
+  <div class="tag">You wrote !keep.txt. Why is it still ignored?</div>
+  <a class="cta" href="app.html">Open the app</a>
+  <div class="demo">With <b>logs/</b> then <b>!logs/keep.txt</b>, the file stays ignored: git never looks inside an ignored directory, so the re-include does nothing. Swap the first line for <b>logs/*</b> and it works.</div>
+  <h2>What it does</h2>
+  <ul><li>IGNORED or TRACKED per path, with the deciding line number</li><li>Last match wins, negation, directory-only rules, **, ranges and escapes</li><li>Explains the parent-directory trap</li><li>Matches real git check-ignore on thousands of random cases</li></ul>
+  <footer>Follows the gitignore manual. Static, client-side, nothing sent. <a href="https://github.com/iLanis-agent/ignorewhy">Source</a></footer>
+</div>
+</body>
+</html>
